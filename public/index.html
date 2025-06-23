@@ -25,24 +25,28 @@
             background-color: #f5f7fa;
             color: var(--dark);
             line-height: 1.6;
+            padding: 20px;
         }
         
         .container {
-            max-width: 1000px;
+            max-width: 800px;
             margin: 0 auto;
-            padding: 2rem;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            padding: 30px;
         }
         
         header {
             text-align: center;
-            margin-bottom: 2rem;
-            padding-bottom: 1rem;
-            border-bottom: 1px solid #ddd;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
         }
         
         h1 {
             color: var(--primary);
-            margin-bottom: 0.5rem;
+            margin-bottom: 10px;
         }
         
         .subtitle {
@@ -51,31 +55,27 @@
         }
         
         .trainer-form {
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            padding: 2rem;
-            margin-bottom: 2rem;
+            margin-bottom: 30px;
         }
         
         .form-group {
-            margin-bottom: 1.5rem;
+            margin-bottom: 20px;
         }
         
         label {
             display: block;
-            margin-bottom: 0.5rem;
+            margin-bottom: 8px;
             font-weight: 600;
             color: var(--dark);
         }
         
         input, textarea {
             width: 100%;
-            padding: 0.75rem;
+            padding: 12px;
             border: 1px solid #ddd;
-            border-radius: 4px;
+            border-radius: 6px;
             font-size: 1rem;
-            transition: border 0.3s;
+            transition: all 0.3s;
         }
         
         textarea {
@@ -86,7 +86,7 @@
         input:focus, textarea:focus {
             outline: none;
             border-color: var(--primary);
-            box-shadow: 0 0 0 2px rgba(67, 97, 238, 0.2);
+            box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
         }
         
         .btn {
@@ -94,12 +94,13 @@
             background: var(--primary);
             color: white;
             border: none;
-            padding: 0.75rem 1.5rem;
-            border-radius: 4px;
+            padding: 12px 24px;
+            border-radius: 6px;
             cursor: pointer;
             font-size: 1rem;
             font-weight: 600;
             transition: all 0.3s;
+            width: 100%;
         }
         
         .btn:hover {
@@ -107,16 +108,18 @@
             transform: translateY(-2px);
         }
         
-        .btn-block {
-            display: block;
-            width: 100%;
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
         }
         
         .status {
-            padding: 1rem;
-            border-radius: 4px;
-            margin-bottom: 1rem;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
             display: none;
+            font-weight: 500;
         }
         
         .status.success {
@@ -134,42 +137,46 @@
         }
         
         .entries-list {
-            background: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            padding: 2rem;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
         }
         
         .entries-list h2 {
-            margin-bottom: 1rem;
+            margin-bottom: 20px;
             color: var(--primary);
         }
         
         .entry-item {
-            padding: 1rem;
+            padding: 15px;
             border-bottom: 1px solid #eee;
+            margin-bottom: 10px;
         }
         
         .entry-item:last-child {
             border-bottom: none;
+            margin-bottom: 0;
         }
         
         .entry-question {
             font-weight: 600;
-            margin-bottom: 0.5rem;
+            margin-bottom: 8px;
+            color: var(--dark);
         }
         
         .entry-answer {
             color: #555;
+            line-height: 1.5;
         }
         
-        @media (max-width: 768px) {
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+        
+        @media (max-width: 600px) {
             .container {
-                padding: 1rem;
-            }
-            
-            .trainer-form, .entries-list {
-                padding: 1.5rem;
+                padding: 20px;
             }
         }
     </style>
@@ -183,7 +190,7 @@
         
         <div class="status" id="status-message"></div>
         
-        <div class="trainer-form">
+        <form id="training-form" class="trainer-form">
             <div class="form-group">
                 <label for="question">Question</label>
                 <input type="text" id="question" placeholder="What is the capital of France?" required>
@@ -194,127 +201,182 @@
                 <textarea id="answer" placeholder="The capital of France is Paris." required></textarea>
             </div>
             
-            <button id="train-btn" class="btn btn-block">Add to Knowledge Base</button>
-        </div>
+            <button type="submit" id="train-btn" class="btn">
+                <span id="btn-text">Add to Knowledge Base</span>
+                <span id="btn-spinner" style="display:none;">⏳ Sending...</span>
+            </button>
+        </form>
         
         <div class="entries-list">
             <h2>Recent Entries</h2>
             <div id="entries-container">
-                <!-- Entries will be loaded here -->
-                <p>No entries yet. Add your first question and answer above.</p>
+                <div class="loading">Loading knowledge entries...</div>
             </div>
         </div>
     </div>
 
     <script>
-        const backendUrl = 'https://metrotex-backend-be5v.onrender.com/train'; // Replace with your actual backend URL
-        const statusMessage = document.getElementById('status-message');
-        const questionInput = document.getElementById('question');
-        const answerInput = document.getElementById('answer');
-        const trainBtn = document.getElementById('train-btn');
-        const entriesContainer = document.getElementById('entries-container');
+        // Configuration - UPDATE THIS WITH YOUR BACKEND URL
+        const config = {
+            backendUrl: 'https://your-backend-url.com', // Replace with your actual backend URL
+            endpoints: {
+                train: '/train',
+                recentEntries: '/recent-entries'
+            }
+        };
         
-        // Load recent entries when page loads
-        document.addEventListener('DOMContentLoaded', loadRecentEntries);
+        // DOM Elements
+        const elements = {
+            form: document.getElementById('training-form'),
+            questionInput: document.getElementById('question'),
+            answerInput: document.getElementById('answer'),
+            trainBtn: document.getElementById('train-btn'),
+            btnText: document.getElementById('btn-text'),
+            btnSpinner: document.getElementById('btn-spinner'),
+            entriesContainer: document.getElementById('entries-container'),
+            statusMessage: document.getElementById('status-message')
+        };
         
-        // Handle form submission
-        trainBtn.addEventListener('click', async (e) => {
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', () => {
+            loadRecentEntries();
+            setupEventListeners();
+        });
+        
+        function setupEventListeners() {
+            elements.form.addEventListener('submit', handleFormSubmit);
+        }
+        
+        async function handleFormSubmit(e) {
             e.preventDefault();
             
-            const question = questionInput.value.trim();
-            const answer = answerInput.value.trim();
+            const question = elements.questionInput.value.trim();
+            const answer = elements.answerInput.value.trim();
             
+            // Validate inputs
             if (!question || !answer) {
                 showStatus('Please fill in both question and answer fields', 'error');
                 return;
             }
             
-            try {
-                trainBtn.disabled = true;
-                trainBtn.textContent = 'Training...';
-                
-                const response = await sendTrainingData(question, answer);
-                
-                showStatus('Successfully added to knowledge base!', 'success');
-                questionInput.value = '';
-                answerInput.value = '';
-                
-                // Refresh the entries list
-                loadRecentEntries();
-            } catch (error) {
-                console.error('Training error:', error);
-                showStatus('Failed to add to knowledge base. Please try again.', 'error');
-            } finally {
-                trainBtn.disabled = false;
-                trainBtn.textContent = 'Add to Knowledge Base';
-            }
-        });
-        
-        async function sendTrainingData(question, answer) {
-            const trainingData = {
-                [question]: answer
+            // Prepare the data
+            const data = {
+                question,
+                answer
             };
             
-            const response = await fetch(`${backendUrl}/train`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(trainingData)
-            });
+            // UI Loading state
+            setLoadingState(true);
             
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+            try {
+                // Send to backend
+                const response = await fetch(`${config.backendUrl}${config.endpoints.train}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Failed to add knowledge');
+                }
+                
+                const result = await response.json();
+                
+                // Show success
+                showStatus('Successfully added to knowledge base!', 'success');
+                
+                // Clear form
+                elements.form.reset();
+                
+                // Refresh entries
+                loadRecentEntries();
+                
+            } catch (error) {
+                console.error('Training error:', error);
+                showStatus(`Error: ${error.message}`, 'error');
+            } finally {
+                setLoadingState(false);
             }
-            
-            return response.json();
         }
         
         async function loadRecentEntries() {
             try {
-                // In a real implementation, you would fetch these from your backend
-                // For now, we'll just show the most recently added items from localStorage
-                const recentEntries = JSON.parse(localStorage.getItem('recentEntries') || [];
+                elements.entriesContainer.innerHTML = '<div class="loading">Loading knowledge entries...</div>';
                 
-                if (recentEntries.length === 0) {
-                    entriesContainer.innerHTML = '<p>No entries yet. Add your first question and answer above.</p>';
+                const response = await fetch(`${config.backendUrl}${config.endpoints.recentEntries}`);
+                
+                if (!response.ok) {
+                    throw new Error('Failed to load entries');
+                }
+                
+                const entries = await response.json();
+                
+                if (!entries || entries.length === 0) {
+                    elements.entriesContainer.innerHTML = '<p>No entries yet. Add your first question and answer above.</p>';
                     return;
                 }
                 
-                let entriesHTML = '';
-                recentEntries.slice(0, 5).forEach(entry => {
-                    entriesHTML += `
-                        <div class="entry-item">
-                            <div class="entry-question">${entry.question}</div>
-                            <div class="entry-answer">${entry.answer}</div>
-                        </div>
-                    `;
-                });
+                renderEntries(entries);
                 
-                entriesContainer.innerHTML = entriesHTML;
             } catch (error) {
                 console.error('Error loading entries:', error);
-                entriesContainer.innerHTML = '<p>Error loading recent entries.</p>';
+                elements.entriesContainer.innerHTML = `
+                    <div class="status error">
+                        Failed to load entries: ${error.message}
+                    </div>
+                `;
+            }
+        }
+        
+        function renderEntries(entries) {
+            let html = '';
+            
+            entries.forEach(entry => {
+                html += `
+                    <div class="entry-item">
+                        <div class="entry-question">${escapeHtml(entry.question)}</div>
+                        <div class="entry-answer">${escapeHtml(entry.answer)}</div>
+                    </div>
+                `;
+            });
+            
+            elements.entriesContainer.innerHTML = html;
+        }
+        
+        function setLoadingState(isLoading) {
+            if (isLoading) {
+                elements.trainBtn.disabled = true;
+                elements.btnText.style.display = 'none';
+                elements.btnSpinner.style.display = 'inline';
+            } else {
+                elements.trainBtn.disabled = false;
+                elements.btnText.style.display = 'inline';
+                elements.btnSpinner.style.display = 'none';
             }
         }
         
         function showStatus(message, type) {
-            statusMessage.textContent = message;
-            statusMessage.className = 'status ' + type;
+            elements.statusMessage.textContent = message;
+            elements.statusMessage.className = `status ${type}`;
             
             // Hide after 5 seconds
             setTimeout(() => {
-                statusMessage.className = 'status';
-                statusMessage.textContent = '';
+                elements.statusMessage.textContent = '';
+                elements.statusMessage.className = 'status';
             }, 5000);
         }
         
-        // Mock function to simulate storing recent entries
-        function storeRecentEntry(question, answer) {
-            const recentEntries = JSON.parse(localStorage.getItem('recentEntries') || '[]');
-            recentEntries.unshift({ question, answer });
-            localStorage.setItem('recentEntries', JSON.stringify(recentEntries.slice(0, 50)));
+        function escapeHtml(unsafe) {
+            return unsafe
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
         }
     </script>
 </body>
-  </html>
+</html>
