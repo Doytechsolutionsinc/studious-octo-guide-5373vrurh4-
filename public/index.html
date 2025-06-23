@@ -183,6 +183,18 @@
             font-size: 0.9rem;
         }
         
+        .debug-console {
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 20px;
+            font-family: monospace;
+            font-size: 0.8rem;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
         @media (max-width: 600px) {
             .container {
                 padding: 20px;
@@ -214,6 +226,10 @@
                 <span id="btn-text">Add to Knowledge Base</span>
                 <span id="btn-spinner" style="display:none;">⏳ Sending...</span>
             </button>
+            
+            <button type="button" id="debug-btn" class="btn" style="margin-top: 10px; background: #6c757d;">
+                Run Connection Test
+            </button>
         </form>
         
         <div class="entries-list">
@@ -227,17 +243,23 @@
             <h3>Connection Debug</h3>
             <p>Backend URL: <span id="backend-url">https://metrotex-backend-be5v.onrender.com</span></p>
             <p>Status: <span id="connection-status">Checking...</span></p>
+            <p>Last Request: <span id="last-request">None</span></p>
+            <p>Last Response: <span id="last-response">None</span></p>
+        </div>
+        
+        <div class="debug-console" id="debug-console">
+            <div>Debug console will appear here...</div>
         </div>
     </div>
 
     <script>
-        // Configuration - UPDATE THIS WITH YOUR BACKEND URL
+        // Configuration
         const config = {
             backendUrl: 'https://metrotex-backend-be5v.onrender.com',
             endpoints: {
                 train: '/train',
-                // Temporary endpoint until you implement /recent-entries
-                recentEntries: '/recent-entries'
+                recentEntries: '/recent-entries',
+                health: '/health'
             }
         };
         
@@ -252,30 +274,39 @@
             entriesContainer: document.getElementById('entries-container'),
             statusMessage: document.getElementById('status-message'),
             backendUrlEl: document.getElementById('backend-url'),
-            connectionStatus: document.getElementById('connection-status')
+            connectionStatus: document.getElementById('connection-status'),
+            lastRequest: document.getElementById('last-request'),
+            lastResponse: document.getElementById('last-response'),
+            debugConsole: document.getElementById('debug-console'),
+            debugBtn: document.getElementById('debug-btn')
         };
+        
+        // Debug logging
+        function debugLog(message) {
+            const timestamp = new Date().toISOString().substring(11, 23);
+            const logEntry = document.createElement('div');
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            elements.debugConsole.prepend(logEntry);
+            console.log(message);
+        }
         
         // Initialize the application
         document.addEventListener('DOMContentLoaded', () => {
-            // Update debug info
+            debugLog('Application initialized');
             elements.backendUrlEl.textContent = config.backendUrl;
             
-            // Check backend connection
-            checkBackendConnection();
-            
-            // Load recent entries
-            loadRecentEntries();
-            
             // Setup event listeners
-            setupEventListeners();
-        });
-        
-        function setupEventListeners() {
             elements.form.addEventListener('submit', handleFormSubmit);
-        }
+            elements.debugBtn.addEventListener('click', runConnectionTest);
+            
+            // Initial checks
+            checkBackendConnection();
+            loadRecentEntries();
+        });
         
         async function handleFormSubmit(e) {
             e.preventDefault();
+            debugLog('Form submission started');
             
             const question = elements.questionInput.value.trim();
             const answer = elements.answerInput.value.trim();
@@ -283,6 +314,7 @@
             // Validate inputs
             if (!question || !answer) {
                 showStatus('Please fill in both question and answer fields', 'error');
+                debugLog('Validation failed - empty fields');
                 return;
             }
             
@@ -294,9 +326,12 @@
             
             // UI Loading state
             setLoadingState(true);
+            elements.lastRequest.textContent = 'Sending...';
+            debugLog(`Preparing to send: ${JSON.stringify(data)}`);
             
             try {
                 // Send to backend
+                const startTime = performance.now();
                 const response = await fetch(`${config.backendUrl}${config.endpoints.train}`, {
                     method: 'POST',
                     headers: {
@@ -304,24 +339,27 @@
                     },
                     body: JSON.stringify(data)
                 });
+                const responseTime = performance.now() - startTime;
+                
+                debugLog(`Request completed in ${responseTime.toFixed(2)}ms`);
+                elements.lastRequest.textContent = `Sent at ${new Date().toLocaleTimeString()}`;
+                
+                // Log response details
+                const responseData = await response.json().catch(() => ({}));
+                elements.lastResponse.textContent = `${response.status} ${response.statusText}`;
+                
+                debugLog(`Response status: ${response.status}`);
+                debugLog(`Response headers: ${JSON.stringify([...response.headers.entries()])}`);
+                debugLog(`Response body: ${JSON.stringify(responseData)}`);
                 
                 if (!response.ok) {
-                    // Try to get error details
-                    let errorDetails = 'Server error';
-                    try {
-                        const errorData = await response.json();
-                        errorDetails = errorData.error || errorData.message || JSON.stringify(errorData);
-                    } catch {
-                        errorDetails = await response.text();
-                    }
-                    
+                    const errorDetails = responseData.error || responseData.message || 'Unknown error';
                     throw new Error(`HTTP Error ${response.status}: ${errorDetails}`);
                 }
                 
-                const result = await response.json();
-                
                 // Show success
                 showStatus('Successfully added to knowledge base!', 'success');
+                debugLog('Training successful');
                 
                 // Clear form
                 elements.form.reset();
@@ -330,46 +368,93 @@
                 loadRecentEntries();
                 
             } catch (error) {
-                console.error('Training error:', error);
+                debugLog(`Error: ${error.message}`);
+                console.error('Full error:', error);
                 showStatus(`Error: ${error.message}`, 'error');
             } finally {
                 setLoadingState(false);
             }
         }
         
+        async function runConnectionTest() {
+            debugLog('Starting connection test...');
+            setLoadingState(true, 'Testing...');
+            
+            try {
+                // Test CORS preflight
+                debugLog('Testing OPTIONS request...');
+                const optionsResponse = await fetch(`${config.backendUrl}${config.endpoints.train}`, {
+                    method: 'OPTIONS'
+                });
+                debugLog(`OPTIONS response: ${optionsResponse.status}`);
+                
+                // Test GET request
+                debugLog('Testing GET request...');
+                const getResponse = await fetch(`${config.backendUrl}${config.endpoints.health}`);
+                const healthData = await getResponse.json();
+                debugLog(`GET response: ${getResponse.status} - ${JSON.stringify(healthData)}`);
+                
+                // Test POST request
+                debugLog('Testing POST request...');
+                const testData = {
+                    question: `Test question ${Date.now()}`,
+                    answer: "Test answer"
+                };
+                const postResponse = await fetch(`${config.backendUrl}${config.endpoints.train}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(testData)
+                });
+                const postData = await postResponse.json();
+                debugLog(`POST response: ${postResponse.status} - ${JSON.stringify(postData)}`);
+                
+                showStatus('Connection tests completed successfully!', 'success');
+            } catch (error) {
+                debugLog(`Connection test failed: ${error.message}`);
+                showStatus(`Connection test failed: ${error.message}`, 'error');
+            } finally {
+                setLoadingState(false);
+                checkBackendConnection();
+            }
+        }
+        
         async function checkBackendConnection() {
             try {
-                const response = await fetch(`${config.backendUrl}/health`);
+                debugLog('Checking backend connection...');
+                const response = await fetch(`${config.backendUrl}${config.endpoints.health}`);
+                const data = await response.json();
+                
                 if (response.ok) {
-                    const data = await response.json();
-                    elements.connectionStatus.textContent = `Connected! Status: ${data.status}`;
+                    elements.connectionStatus.textContent = `Connected! Status: ${data.status || 'OK'}`;
                     elements.connectionStatus.style.color = '#0a9396';
+                    debugLog(`Backend connection successful: ${data.status}`);
                 } else {
                     elements.connectionStatus.textContent = `Error: ${response.status}`;
                     elements.connectionStatus.style.color = '#ae2012';
+                    debugLog(`Backend connection error: ${response.status}`);
                 }
             } catch (error) {
                 elements.connectionStatus.textContent = `Failed to connect: ${error.message}`;
                 elements.connectionStatus.style.color = '#ae2012';
+                debugLog(`Connection error: ${error.message}`);
             }
         }
         
         async function loadRecentEntries() {
             try {
                 elements.entriesContainer.innerHTML = '<div class="loading">Loading knowledge entries...</div>';
+                debugLog('Loading recent entries...');
                 
-                // Since /recent-entries might not be implemented, we'll use a fallback
-                const response = await fetch(`${config.backendUrl}/health`);
+                const response = await fetch(`${config.backendUrl}${config.endpoints.recentEntries}`);
                 
                 if (!response.ok) {
-                    throw new Error('Failed to load entries');
+                    throw new Error(`HTTP Error ${response.status}`);
                 }
                 
-                // This is just a placeholder - replace with actual endpoint when available
-                const entries = [
-                    { question: "What is AI?", answer: "Artificial Intelligence" },
-                    { question: "What is the capital of France?", answer: "Paris" }
-                ];
+                const entries = await response.json();
+                debugLog(`Loaded ${entries.length} entries`);
                 
                 if (!entries || entries.length === 0) {
                     elements.entriesContainer.innerHTML = '<p>No entries yet. Add your first question and answer above.</p>';
@@ -379,11 +464,10 @@
                 renderEntries(entries);
                 
             } catch (error) {
-                console.error('Error loading entries:', error);
+                debugLog(`Error loading entries: ${error.message}`);
                 elements.entriesContainer.innerHTML = `
                     <div class="status error">
-                        Failed to load entries: ${error.message}<br>
-                        Note: The /recent-entries endpoint needs to be implemented in your backend.
+                        Failed to load entries: ${error.message}
                     </div>
                 `;
             }
@@ -404,13 +488,16 @@
             elements.entriesContainer.innerHTML = html;
         }
         
-        function setLoadingState(isLoading) {
+        function setLoadingState(isLoading, text = 'Sending...') {
             if (isLoading) {
                 elements.trainBtn.disabled = true;
+                elements.debugBtn.disabled = true;
                 elements.btnText.style.display = 'none';
                 elements.btnSpinner.style.display = 'inline';
+                elements.btnSpinner.textContent = text;
             } else {
                 elements.trainBtn.disabled = false;
+                elements.debugBtn.disabled = false;
                 elements.btnText.style.display = 'inline';
                 elements.btnSpinner.style.display = 'none';
             }
@@ -419,6 +506,7 @@
         function showStatus(message, type) {
             elements.statusMessage.textContent = message;
             elements.statusMessage.className = `status ${type}`;
+            debugLog(`Status: ${type} - ${message}`);
             
             // Hide after 5 seconds
             setTimeout(() => {
