@@ -174,6 +174,15 @@
             color: #666;
         }
         
+        .debug-info {
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            padding: 15px;
+            margin-top: 20px;
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+        
         @media (max-width: 600px) {
             .container {
                 padding: 20px;
@@ -213,14 +222,21 @@
                 <div class="loading">Loading knowledge entries...</div>
             </div>
         </div>
+        
+        <div class="debug-info">
+            <h3>Connection Debug</h3>
+            <p>Backend URL: <span id="backend-url">https://metrotex-backend-be5v.onrender.com</span></p>
+            <p>Status: <span id="connection-status">Checking...</span></p>
+        </div>
     </div>
 
     <script>
         // Configuration - UPDATE THIS WITH YOUR BACKEND URL
         const config = {
-            backendUrl: 'https://metrotex-backend-be5v.onrender.com', // Replace with your actual backend URL
+            backendUrl: 'https://metrotex-backend-be5v.onrender.com',
             endpoints: {
                 train: '/train',
+                // Temporary endpoint until you implement /recent-entries
                 recentEntries: '/recent-entries'
             }
         };
@@ -234,12 +250,23 @@
             btnText: document.getElementById('btn-text'),
             btnSpinner: document.getElementById('btn-spinner'),
             entriesContainer: document.getElementById('entries-container'),
-            statusMessage: document.getElementById('status-message')
+            statusMessage: document.getElementById('status-message'),
+            backendUrlEl: document.getElementById('backend-url'),
+            connectionStatus: document.getElementById('connection-status')
         };
         
         // Initialize the application
         document.addEventListener('DOMContentLoaded', () => {
+            // Update debug info
+            elements.backendUrlEl.textContent = config.backendUrl;
+            
+            // Check backend connection
+            checkBackendConnection();
+            
+            // Load recent entries
             loadRecentEntries();
+            
+            // Setup event listeners
             setupEventListeners();
         });
         
@@ -279,8 +306,16 @@
                 });
                 
                 if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || 'Failed to add knowledge');
+                    // Try to get error details
+                    let errorDetails = 'Server error';
+                    try {
+                        const errorData = await response.json();
+                        errorDetails = errorData.error || errorData.message || JSON.stringify(errorData);
+                    } catch {
+                        errorDetails = await response.text();
+                    }
+                    
+                    throw new Error(`HTTP Error ${response.status}: ${errorDetails}`);
                 }
                 
                 const result = await response.json();
@@ -302,17 +337,39 @@
             }
         }
         
+        async function checkBackendConnection() {
+            try {
+                const response = await fetch(`${config.backendUrl}/health`);
+                if (response.ok) {
+                    const data = await response.json();
+                    elements.connectionStatus.textContent = `Connected! Status: ${data.status}`;
+                    elements.connectionStatus.style.color = '#0a9396';
+                } else {
+                    elements.connectionStatus.textContent = `Error: ${response.status}`;
+                    elements.connectionStatus.style.color = '#ae2012';
+                }
+            } catch (error) {
+                elements.connectionStatus.textContent = `Failed to connect: ${error.message}`;
+                elements.connectionStatus.style.color = '#ae2012';
+            }
+        }
+        
         async function loadRecentEntries() {
             try {
                 elements.entriesContainer.innerHTML = '<div class="loading">Loading knowledge entries...</div>';
                 
-                const response = await fetch(`${config.backendUrl}${config.endpoints.recentEntries}`);
+                // Since /recent-entries might not be implemented, we'll use a fallback
+                const response = await fetch(`${config.backendUrl}/health`);
                 
                 if (!response.ok) {
                     throw new Error('Failed to load entries');
                 }
                 
-                const entries = await response.json();
+                // This is just a placeholder - replace with actual endpoint when available
+                const entries = [
+                    { question: "What is AI?", answer: "Artificial Intelligence" },
+                    { question: "What is the capital of France?", answer: "Paris" }
+                ];
                 
                 if (!entries || entries.length === 0) {
                     elements.entriesContainer.innerHTML = '<p>No entries yet. Add your first question and answer above.</p>';
@@ -325,7 +382,8 @@
                 console.error('Error loading entries:', error);
                 elements.entriesContainer.innerHTML = `
                     <div class="status error">
-                        Failed to load entries: ${error.message}
+                        Failed to load entries: ${error.message}<br>
+                        Note: The /recent-entries endpoint needs to be implemented in your backend.
                     </div>
                 `;
             }
