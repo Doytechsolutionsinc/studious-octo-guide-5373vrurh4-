@@ -1,142 +1,320 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MetroTex DB Manager</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      max-width: 600px;
-      margin: 0 auto;
-      padding: 20px;
-      background-color: #f5f5f5;
-    }
-    h1 {
-      color: #2c3e50;
-      text-align: center;
-    }
-    .form-container {
-      background: white;
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    }
-    .form-group {
-      margin-bottom: 15px;
-    }
-    label {
-      display: block;
-      margin-bottom: 5px;
-      font-weight: bold;
-      color: #34495e;
-    }
-    input, textarea {
-      width: 100%;
-      padding: 10px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      font-size: 16px;
-    }
-    textarea {
-      min-height: 120px;
-      resize: vertical;
-    }
-    button {
-      background: #3498db;
-      color: white;
-      border: none;
-      padding: 12px 20px;
-      border-radius: 4px;
-      cursor: pointer;
-      font-size: 16px;
-      width: 100%;
-      transition: background 0.3s;
-    }
-    button:hover {
-      background: #2980b9;
-    }
-    #response {
-      margin-top: 20px;
-      padding: 15px;
-      border-radius: 4px;
-      display: none;
-    }
-    .success {
-      background: #d4edda;
-      color: #155724;
-      border: 1px solid #c3e6cb;
-    }
-    .error {
-      background: #f8d7da;
-      color: #721c24;
-      border: 1px solid #f5c6cb;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Knowledge Base Trainer</title>
+    <style>
+        :root {
+            --primary: #4361ee;
+            --secondary: #3f37c9;
+            --light: #f8f9fa;
+            --dark: #212529;
+            --success: #4cc9f0;
+            --danger: #f72585;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7fa;
+            color: var(--dark);
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        h1 {
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+        }
+        
+        .subtitle {
+            color: #666;
+            font-size: 1.1rem;
+        }
+        
+        .trainer-form {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            color: var(--dark);
+        }
+        
+        input, textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+            transition: border 0.3s;
+        }
+        
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+        
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(67, 97, 238, 0.2);
+        }
+        
+        .btn {
+            display: inline-block;
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        .btn:hover {
+            background: var(--secondary);
+            transform: translateY(-2px);
+        }
+        
+        .btn-block {
+            display: block;
+            width: 100%;
+        }
+        
+        .status {
+            padding: 1rem;
+            border-radius: 4px;
+            margin-bottom: 1rem;
+            display: none;
+        }
+        
+        .status.success {
+            background-color: rgba(76, 201, 240, 0.2);
+            border-left: 4px solid var(--success);
+            color: #0a9396;
+            display: block;
+        }
+        
+        .status.error {
+            background-color: rgba(247, 37, 133, 0.2);
+            border-left: 4px solid var(--danger);
+            color: #ae2012;
+            display: block;
+        }
+        
+        .entries-list {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+        }
+        
+        .entries-list h2 {
+            margin-bottom: 1rem;
+            color: var(--primary);
+        }
+        
+        .entry-item {
+            padding: 1rem;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .entry-item:last-child {
+            border-bottom: none;
+        }
+        
+        .entry-question {
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .entry-answer {
+            color: #555;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            .trainer-form, .entries-list {
+                padding: 1.5rem;
+            }
+        }
+    </style>
 </head>
 <body>
-  <h1>Add Q&A to MetroTex Database</h1>
-  <div class="form-container">
-    <div class="form-group">
-      <label for="question">Question:</label>
-      <input type="text" id="question" placeholder="E.g., What is MetroTex?">
+    <div class="container">
+        <header>
+            <h1>Knowledge Base Trainer</h1>
+            <p class="subtitle">Add questions and answers to train your AI assistant</p>
+        </header>
+        
+        <div class="status" id="status-message"></div>
+        
+        <div class="trainer-form">
+            <div class="form-group">
+                <label for="question">Question</label>
+                <input type="text" id="question" placeholder="What is the capital of France?" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="answer">Answer</label>
+                <textarea id="answer" placeholder="The capital of France is Paris." required></textarea>
+            </div>
+            
+            <button id="train-btn" class="btn btn-block">Add to Knowledge Base</button>
+        </div>
+        
+        <div class="entries-list">
+            <h2>Recent Entries</h2>
+            <div id="entries-container">
+                <!-- Entries will be loaded here -->
+                <p>No entries yet. Add your first question and answer above.</p>
+            </div>
+        </div>
     </div>
-    <div class="form-group">
-      <label for="answer">Answer:</label>
-      <textarea id="answer" placeholder="E.g., MetroTex is..."></textarea>
-    </div>
-    <button onclick="addToDatabase()">Add to Database</button>
-    <div id="response"></div>
-  </div>
 
-  <script>
-    const BACKEND_URL = "https://metrotex-backend-be5v.onrender.com";
-
-    async function addToDatabase() {
-      const question = document.getElementById('question').value.trim();
-      const answer = document.getElementById('answer').value.trim();
-      const responseDiv = document.getElementById('response');
-
-      // Clear previous messages
-      responseDiv.style.display = 'none';
-      responseDiv.className = '';
-      responseDiv.textContent = '';
-
-      // Validate input
-      if (!question || !answer) {
-        showResponse('error', '❌ Both fields are required!');
-        return;
-      }
-
-      try {
-        const response = await fetch(`${BACKEND_URL}/add-to-db`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ question, answer }),
+    <script>
+        const backendUrl = 'https://your-backend-url.com'; // Replace with your actual backend URL
+        const statusMessage = document.getElementById('status-message');
+        const questionInput = document.getElementById('question');
+        const answerInput = document.getElementById('answer');
+        const trainBtn = document.getElementById('train-btn');
+        const entriesContainer = document.getElementById('entries-container');
+        
+        // Load recent entries when page loads
+        document.addEventListener('DOMContentLoaded', loadRecentEntries);
+        
+        // Handle form submission
+        trainBtn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            
+            const question = questionInput.value.trim();
+            const answer = answerInput.value.trim();
+            
+            if (!question || !answer) {
+                showStatus('Please fill in both question and answer fields', 'error');
+                return;
+            }
+            
+            try {
+                trainBtn.disabled = true;
+                trainBtn.textContent = 'Training...';
+                
+                const response = await sendTrainingData(question, answer);
+                
+                showStatus('Successfully added to knowledge base!', 'success');
+                questionInput.value = '';
+                answerInput.value = '';
+                
+                // Refresh the entries list
+                loadRecentEntries();
+            } catch (error) {
+                console.error('Training error:', error);
+                showStatus('Failed to add to knowledge base. Please try again.', 'error');
+            } finally {
+                trainBtn.disabled = false;
+                trainBtn.textContent = 'Add to Knowledge Base';
+            }
         });
-
-        const data = await response.json();
-
-        if (response.ok) {
-          showResponse('success', '✅ Added to database successfully!');
-          document.getElementById('question').value = '';
-          document.getElementById('answer').value = '';
-        } else {
-          showResponse('error', `❌ Error: ${data.error || data.message || 'Unknown error'}`);
+        
+        async function sendTrainingData(question, answer) {
+            const trainingData = {
+                [question]: answer
+            };
+            
+            const response = await fetch(`${backendUrl}/train`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(trainingData)
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            return response.json();
         }
-      } catch (error) {
-        showResponse('error', `❌ Network error: ${error.message}`);
-      }
-    }
-
-    function showResponse(type, message) {
-      const responseDiv = document.getElementById('response');
-      responseDiv.textContent = message;
-      responseDiv.className = type;
-      responseDiv.style.display = 'block';
-    }
-  </script>
+        
+        async function loadRecentEntries() {
+            try {
+                // In a real implementation, you would fetch these from your backend
+                // For now, we'll just show the most recently added items from localStorage
+                const recentEntries = JSON.parse(localStorage.getItem('recentEntries') || [];
+                
+                if (recentEntries.length === 0) {
+                    entriesContainer.innerHTML = '<p>No entries yet. Add your first question and answer above.</p>';
+                    return;
+                }
+                
+                let entriesHTML = '';
+                recentEntries.slice(0, 5).forEach(entry => {
+                    entriesHTML += `
+                        <div class="entry-item">
+                            <div class="entry-question">${entry.question}</div>
+                            <div class="entry-answer">${entry.answer}</div>
+                        </div>
+                    `;
+                });
+                
+                entriesContainer.innerHTML = entriesHTML;
+            } catch (error) {
+                console.error('Error loading entries:', error);
+                entriesContainer.innerHTML = '<p>Error loading recent entries.</p>';
+            }
+        }
+        
+        function showStatus(message, type) {
+            statusMessage.textContent = message;
+            statusMessage.className = 'status ' + type;
+            
+            // Hide after 5 seconds
+            setTimeout(() => {
+                statusMessage.className = 'status';
+                statusMessage.textContent = '';
+            }, 5000);
+        }
+        
+        // Mock function to simulate storing recent entries
+        function storeRecentEntry(question, answer) {
+            const recentEntries = JSON.parse(localStorage.getItem('recentEntries') || '[]');
+            recentEntries.unshift({ question, answer });
+            localStorage.setItem('recentEntries', JSON.stringify(recentEntries.slice(0, 50)));
+        }
+    </script>
 </body>
-</html>
+  </html>
